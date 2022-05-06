@@ -1,0 +1,11 @@
+{
+  "files": {
+    "main.css": "/BinanceOrderBook/static/css/main.23dfe8ed.css",
+    "main.js": "/BinanceOrderBook/static/js/main.2e39e444.js",
+    "index.html": "/BinanceOrderBook/index.html"
+  },
+  "entrypoints": [
+    "static/css/main.23dfe8ed.css",
+    "static/js/main.2e39e444.js"
+  ]
+}
