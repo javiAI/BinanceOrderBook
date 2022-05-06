@@ -1,38 +1,117 @@
 .App {
-  text-align: center;
+    width: 650px;
+    text-align: center;
+}
+/* ###################### */
+/* #       GENERAL      # */
+/* ###################### */
+
+* {
+    box-sizing: border-box;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+body {
+    font-family: 'Karla', sans-serif;
+    margin: 0;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+main {
+    padding: 36px;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+/* ###################### */
+/* #       NAVBAR       # */
+/* ###################### */
+.navbar {
+    display: flex;
+    align-items: center;
+    height: 65px;
+    background: linear-gradient(to right, #672280 1.18%, #a626d3 100%);
+    color: white;
+    padding: 20px;
 }
 
-.App-link {
-  color: #61dafb;
+.navbar--img {
+    height: 100%;
+    margin-right: 6px;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.navbar--h2 {
+    font-size: 1.25rem;
+    margin-right: auto;
+}
+
+.navbar--h4 {
+    font-size: 0.75 rem;
+    font-weight: 500;
+}
+
+/* ###################### */
+/* #        CARD        # */
+/* ###################### */
+
+.form {
+    display: grid;
+    grid-template: 40px 40px / 1fr 1fr;
+    gap: 17px;
+}
+
+.form--input {
+    /* 
+font-family: "Karla", sans-serif; */
+    border-radius: 5px;
+    border: 1px solid #d5d4d8;
+    text-indent: 5px;
+}
+
+.form--button {
+    grid-column: 1 / -1; /* 
+font-family: "Karla", sans-serif; */
+    border-radius: 5px;
+    border: 1px solid #d5d4d8;
+    background: linear-gradient(90.41deg, #711f8d 1.14%, #a818da 100%);
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+/* ###################### */
+/* #        MEME        # */
+/* ###################### */
+
+.img--meme {
+    margin-top: 30px;
+    height: 500px;
+    width: 100%;
+    object-fit: fill;
+}
+
+.text--top {
+    margin: auto;
+    font-size: 40px;
+    position: absolute;
+    top: 300px;
+    /* left: 275px; */
+    background-color: transparent;
+    color: white;
+    font-weight: bold;
+}
+
+.text--bottom {
+    margin: auto;
+    font-size: 40px;
+    position: absolute;
+    top: 575px;
+    /* left: 275px; */
+    background-color: transparent;
+    color: white;
+    font-weight: bold;
+}
+
+.sometext {
+    height: 500px;
+    margin: 3rem;
+    padding: 2rem;
+    border-style: solid;
+    border-width: 1px;
 }
