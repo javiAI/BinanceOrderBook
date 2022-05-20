@@ -7,62 +7,79 @@ import Autocomplete from '@mui/material/Autocomplete';
 import { useNavigate, Routes, Route } from 'react-router-dom';
 import OrderBook from './OrderBook';
 import history from '../auxiliary_functions/BrowserHistory';
-// import { Socket } from 'net';
 
 export default function Main() {
     // State Variables
-    const [symbols, setSymbols] = useState([]);
-    const [defaultPair, setDefaultPair] = useState('BTCUSDT');
-    const path = history.location.pathname;
-    const pair = ['', 'preview/', 'BinanceOrderBook'].includes(path.slice(1))
-        ? defaultPair
-        : path.slice(1);
-    const [selection, setSelection] = useState(pair);
+    const defaultPair = 'BTCUSDT';
+
+    const path = useRef(history.location.pathname);
+    const symbols = useRef([]);
+    const currentPair = useRef(
+        path.current.slice(1) === '' ? defaultPair : path.current.slice(1)
+    );
+    const lastPrice = useRef('---');
+    const lastPriceUpdateId = useRef(0);
+
+    // Clients (WebSockets, Binance, Navigate)
+    const socket = useRef(null);
+    const client = useRef(null);
+    const navigate = useRef(useNavigate());
+
     const [tableData, setTableData] = useState({
-        pair: selection,
-        lastUpdateId: 0,
+        pair: symbols.current.includes(path.current.slice(1))
+            ? path.current.slice(1)
+            : currentPair.current,
+        precision: { precision: '', decimals: '' },
+        initialPrice: lastPrice.current,
+        lastPrice: lastPrice.current,
+        lastUpdateId: lastPriceUpdateId,
         asks: [],
         bids: [],
     });
 
-    // Clients (WebSockets, Binance, Navigate)
-    const socket = useRef(null);
-    const client = Binance(); // useRef(null);
-    const navigate = useNavigate();
-
     useEffect(() => {
-        setDefaultPair(pair);
-
+        console.log('1');
+        client.current = Binance();
         const getExchangeInfo = async () => {
-            const respSymbols = await client.exchangeInfo().then((data) =>
-                data.symbols.map((pair) => {
-                    // console.log(pair.status, pair.symbol);
-                    return pair.status === 'TRADING' ? pair.symbol : '';
-                })
-            );
-            setSymbols(respSymbols.filter((item) => item !== '').sort());
+            symbols.current = await client.current
+                .exchangeInfo()
+                .then((data) => {
+                    const updatedSymbols = data.symbols
+                        .map((s) => {
+                            return s.status === 'TRADING' ? s.symbol : '';
+                        })
+                        .filter((item) => item !== '');
+
+                    const symbol = path.current.slice(1);
+
+                    if (updatedSymbols.includes(symbol)) {
+                        currentPair.current = symbol;
+                    } else {
+                        currentPair.current = defaultPair;
+                        navigate.current('/' + currentPair.current);
+                    }
+                    setTableData((prev) => {
+                        return {
+                            ...prev,
+                            pair: currentPair.current,
+                        };
+                    });
+                    return updatedSymbols;
+                });
         };
         getExchangeInfo().then(console.log('Symbols updated!'));
+        console.log('1e');
     }, []);
 
     useEffect(() => {
-        if (symbols.length === 0) return;
-
-        if (symbols.includes(pair)) {
-            setSelection(pair);
-        } else {
-            navigate('/' + defaultPair);
-            setSelection(defaultPair);
-        }
-    }, [symbols]);
-
-    useEffect(() => {
-        // if (!symbols.includes(selection)) return;
+        console.log('2');
+        const streams = [
+            tableData.pair.toLowerCase() + '@depth@100ms',
+            tableData.pair.toLowerCase() + '@trade',
+        ];
 
         socket.current = new WebSocket(
-            'wss://stream.binance.com:9443/ws/' +
-                selection.toLowerCase() +
-                '@depth@100ms'
+            'wss://stream.binance.com:9443/ws/' + streams.join('/')
         );
         socket.current.onopen = () => {
             console.log('Opening');
@@ -72,159 +89,229 @@ export default function Main() {
         };
 
         const socketCurrent = socket.current;
+        console.log('2e');
         return () => {
             socketCurrent.close();
         };
-    }, [selection]);
+    }, [tableData.pair]);
 
     useEffect(() => {
-        if (!client) return;
+        console.log('3');
+        if (!client.current) return;
         if (!socket.current) return;
-        const pair = history.location.pathname.slice(1);
-        if ((pair !== selection) & (typeof selection !== 'undefined'))
-            navigate('/' + selection);
 
         const getOrderBookInfo = async () => {
-            const respBook = await client
-                .book({ symbol: selection })
+            const respBook = await client.current
+                .book({ symbol: tableData.pair, limit: 5000 })
                 .then((data) => {
+                    lastPriceUpdateId.current = data.lastUpdateId;
                     return {
-                        pair: selection,
                         lastUpdateId: data.lastUpdateId,
-                        asks: data.asks.reverse(),
-                        bids: data.bids,
+                        asks: data.asks.reverse().map((v) => {
+                            return {
+                                ...v,
+                                maxId: data.lastUpdateId,
+                            };
+                        }),
+                        bids: data.bids.map((v) => {
+                            return {
+                                ...v,
+                                maxId: data.lastUpdateId,
+                            };
+                        }),
                     };
                 });
-            setTableData(respBook);
+
+            const lastPrice = await client.current
+                .prices({ symbol: tableData.pair })
+                .then((lastPrice) => {
+                    return lastPrice[tableData.pair];
+                });
+
+            const digits = (value) => {
+                const res = Number(value).toString().split('.');
+                if (res.length === 1) {
+                    return {
+                        precision: res[0].length,
+                        decimals:
+                            (res[0].length -
+                                Number('0.' + res[0])
+                                    .toString()
+                                    .split('.')[1].length) *
+                            -1,
+                    };
+                }
+                if (res.length === 2) {
+                    return {
+                        precision:
+                            res[0] === '0'
+                                ? Number(res[1]).toString().length
+                                : res[0].length + res[1].length,
+                        decimals: res[1].length,
+                    };
+                }
+            };
+
+            const getPrecision = () => {
+                if (!respBook.asks.length | !respBook.bids.length) {
+                    return null;
+                }
+                const relevantPrices = [
+                    digits(respBook.asks.at(-1).price),
+                    digits(lastPrice),
+                    digits(respBook.bids.at(0).price),
+                ];
+                return {
+                    precision: Math.max(
+                        relevantPrices[0].precision,
+                        relevantPrices[1].precision,
+                        relevantPrices[2].precision
+                    ),
+                    decimals: Math.max(
+                        relevantPrices[0].decimals,
+                        relevantPrices[1].decimals,
+                        relevantPrices[2].decimals
+                    ),
+                };
+            };
+
+            setTableData((prev) => {
+                return {
+                    ...prev,
+                    ...respBook,
+                    precision: getPrecision(),
+                    initialPrice: lastPrice,
+                    lastPrice: lastPrice,
+                };
+            });
+            return lastPrice;
         };
-        getOrderBookInfo();
-    }, [selection]);
+
+        lastPrice.current = getOrderBookInfo();
+        console.log('3e');
+    }, [tableData.pair]);
 
     useEffect(() => {
+        // console.log('4');
         if (!socket) return;
 
         socket.current.onmessage = (event) => {
             const updates = JSON.parse(event.data);
             const name = updates.e;
-            const symbol = updates.s;
-            if (
-                (name === 'depthUpdate') &
-                (symbol === tableData.pair) // &
-                // (updates.u > tableData.lastUpdateId) &
-                // (updates.U < tableData.lastUpdateId)
-            ) {
+
+            if (name === 'depthUpdate') {
+                lastPriceUpdateId.current = updates.u;
                 setTableData((dt) => {
-                    const dt_asks = dt.asks;
-                    const dt_bids = dt.bids;
+                    const currentPrice =
+                        typeof dt.lastPrice === 'object'
+                            ? dt.initialPrice
+                            : dt.lastPrice;
 
-                    for (let i = 0; i < updates.a.length; i++) {
-                        const index = dt_asks.findIndex(
-                            (el) => el.price === updates.a[i][0]
-                        );
-
-                        if (index >= 0) {
-                            if (updates.a[i][1] > 0) {
-                                dt_asks[index].quantity = updates.a[i][1];
-                            } else {
-                                dt_asks.splice(index, 1);
-                            }
-                        } else {
-                            if (updates.a[i][1] > 0) {
-                                // console.log(updates.a[i]);
-                                dt_asks.push({
-                                    price: updates.a[i][0],
-                                    quantity: updates.a[i][1],
-                                });
-                            }
-                        }
-                    }
-                    for (let j = 0; j < updates.b.length; j++) {
-                        const index = dt_bids.findIndex(
-                            (el) => el.price === updates.b[j][0]
-                        );
-
-                        if (index >= 0) {
-                            if (updates.b[j][1] > 0) {
-                                dt_bids[index].quantity = updates.b[j][1];
-                            } else {
-                                dt_bids.splice(index, 1);
-                            }
-                        } else {
-                            if (updates.b[j][1] > 0) {
-                                // console.log(
-                                //     'AQUI',
-                                //     [updates.b[j][0], updates.b[j][1]],
-                                //     dt_bids[j]
-                                // );
-
-                                dt_bids.push({
-                                    price: updates.b[j][0],
-                                    quantity: updates.b[j][1],
-                                });
-                            }
-                        }
-                    }
-
-                    function comparePrice(a, b) {
+                    const comparePrice = (a, b) => {
                         if (parseFloat(a.price) < parseFloat(b.price)) return 1;
                         if (parseFloat(a.price) > parseFloat(b.price))
                             return -1;
                         return 0;
-                    }
+                    };
+
+                    const updateRows = (updates, arr, type) => {
+                        for (let i = 0; i < updates.length; i++) {
+                            const index = arr.findIndex(
+                                (el) => el.price === updates[i][0]
+                            );
+
+                            if (index >= 0) {
+                                if (updates[i][1] > 0) {
+                                    arr[index].quantity = updates[i][1];
+                                    arr[index].maxId = updates.u;
+                                } else {
+                                    arr.splice(index, 1);
+                                }
+                            } else {
+                                if (updates[i][1] > 0) {
+                                    arr.push({
+                                        price: updates[i][0],
+                                        quantity: updates[i][1],
+                                        maxId: updates.u,
+                                    });
+                                }
+                            }
+                        }
+
+                        return arr
+                            .filter((item) =>
+                                type === 'asks'
+                                    ? (item.price >= currentPrice) |
+                                      (item.lastUpdateId >
+                                          lastPriceUpdateId.current)
+                                    : (item.price <= currentPrice) |
+                                      (item.lastUpdateId >
+                                          lastPriceUpdateId.current)
+                            )
+                            .sort(comparePrice);
+                    };
+
+                    const dt_asks = updateRows(updates.a, dt.asks, 'asks');
+                    const dt_bids = updateRows(updates.b, dt.bids, 'bids');
 
                     return {
                         ...dt,
                         lastUpdateId: updates.u,
-                        asks: dt_asks.sort(comparePrice),
-                        bids: dt_bids.sort(comparePrice),
+                        lastPrice: lastPrice.current,
+                        asks: dt_asks,
+                        bids: dt_bids,
                     };
                 });
             }
 
-            // if (m < 50) {
-            //     console.log('M', m);
-            //     console.log('e', updates.e, updates.e === 'depthUpdate');
-            //     console.log(
-            //         's',
-            //         updates.s,
-            //         tableData.pair,
-            //         updates.s === tableData.pair
-            //     );
-            //     console.log('n', n, n === 0);
-            //     console.log(
-            //         'U',
-            //         updates.U,
-            //         tableData.lastUpdateId,
-            //         updates.U < tableData.lastUpdateId
-            //     );
-            //     console.log(
-            //         'u',
-            //         updates.u,
-            //         tableData.lastUpdateId,
-            //         updates.u > tableData.lastUpdateId
-            //     );
-            //     console.log('----------------------');
-            //     m += 1;
-            // }
+            if (name === 'trade') {
+                lastPrice.current = updates.p;
+            }
         };
+        // console.log('4e');
     }, [tableData]);
 
     const handleChange = (_, v) => {
-        if (symbols.includes(v)) {
-            navigate('/' + v /*, { replace: true } */);
-            setSelection(v);
-        } else {
-            setSelection(defaultPair);
-            navigate('/' + defaultPair /*, { replace: true } */);
-        }
+        currentPair.current = v;
+        setTableData((prev) => {
+            return {
+                ...prev,
+                pair: v,
+            };
+        });
+        navigate.current('/' + v);
+    };
+
+    const handlePrecision = (v) => {
+        setTableData((prev) => {
+            const value = isNaN(v.target.valueAsNumber)
+                ? prev.precision.decimals
+                : v.target.valueAsNumber;
+            const decimals = Math.min(
+                Math.max(
+                    prev.precision.decimals - prev.precision.precision + 1,
+                    value
+                ),
+                18
+            );
+            const precision =
+                prev.precision.precision + decimals - prev.precision.decimals;
+            return {
+                ...prev,
+                precision: {
+                    precision: precision,
+                    decimals: decimals,
+                },
+            };
+        });
     };
 
     return (
         <div className='Main'>
             <Autocomplete
                 id='clear-on-escape'
-                options={symbols}
-                value={symbols.includes(selection) ? selection : defaultPair}
+                options={symbols.current}
+                value={currentPair.current}
                 sx={{ width: 300 }}
                 autoHighlight={true}
                 clearOnEscape
@@ -238,6 +325,23 @@ export default function Main() {
                     />
                 )}
             />
+            <div className='selectors'>
+                <TextField
+                    id='precision'
+                    value={Math.max(
+                        tableData.precision.decimals -
+                            tableData.precision.precision +
+                            1,
+                        tableData.precision.decimals
+                    )}
+                    label='Decimals'
+                    type='number'
+                    onChange={handlePrecision}
+                    InputLabelProps={{
+                        shrink: true,
+                    }}
+                />
+            </div>
             <div className='Router'>
                 <Routes>
                     <Route
@@ -249,7 +353,7 @@ export default function Main() {
                         element={<OrderBook tableData={tableData} />}
                     />
                     <Route
-                        path={'/' + selection}
+                        path={'/' + tableData.pair}
                         element={<OrderBook tableData={tableData} />}
                     />
                 </Routes>

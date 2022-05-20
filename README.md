@@ -1,4 +1,62 @@
-# Getting Started with Create React App
+-   Install react-app-rewired and dependencies
+
+```
+npm install --save-dev react-app-rewired
+npm install --save-dev crypto-browserify stream-browserify assert stream-http https-browserify os-browserify url buffer process
+```
+
+or
+
+```
+yarn add --dev react-app-rewired
+```
+
+-   In root create config-overrides.js and add
+
+```
+const webpack = require('webpack');
+module.exports = function override(config) {
+		const fallback = config.resolve.fallback || {};
+		Object.assign(fallback, {
+    	"crypto": require.resolve("crypto-browserify"),
+      "stream": require.resolve("stream-browserify"),
+      "assert": require.resolve("assert"),
+      "http": require.resolve("stream-http"),
+      "https": require.resolve("https-browserify"),
+      "os": require.resolve("os-browserify"),
+      "url": require.resolve("url")
+      })
+   config.resolve.fallback = fallback;
+   config.plugins = (config.plugins || []).concat([
+   	new webpack.ProvidePlugin({
+    	process: 'process/browser',
+      Buffer: ['buffer', 'Buffer']
+    })
+   ])
+   return config; }
+```
+
+-   Change package.json snippet
+
+```
+"scripts": {
+  "start": "react-scripts start",
+  "build": "react-scripts build",
+  "test": "react-scripts test",
+  "eject": "react-scripts eject"
+ },
+```
+
+for
+
+```
+"scripts": {
+  "start": "react-app-rewired start",
+  "build": "react-app-rewired build",
+  "test": "react-app-rewired test",
+  "eject": "react-scripts eject"
+ },
+```
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
