@@ -1,6 +1,8 @@
 .App {
-    width: 650px;
+    width: 1300px;
     text-align: center;
+    display: flex;
+    margin: auto;
 }
 /* ###################### */
 /* #       GENERAL      # */
@@ -15,103 +17,55 @@ body {
     margin: 0;
 }
 
-main {
-    padding: 36px;
+.main {
+    margin-top: 2rem;
+    padding-bottom: 2rem;
 }
 
-/* ###################### */
-/* #       NAVBAR       # */
-/* ###################### */
-.navbar {
+.selectors {
     display: flex;
-    align-items: center;
-    height: 65px;
-    background: linear-gradient(to right, #672280 1.18%, #a626d3 100%);
+    align-items: flex-end;
+    padding: 3rem;
+}
+
+.autocomplete {
+    padding: 1.5rem;
+}
+.textfield {
+    margin-left: auto;
+    padding: 1.5rem;
+}
+
+.inputLabel {
+    margin-left: 2rem;
+    margin-right: 1rem;
+    padding: 1rem;
+}
+
+.orderBook {
+    padding-left: 2rem;
+    padding-right: 2rem;
+}
+.tables--container {
+    display: flex;
+    gap: 2rem;
+    background-color: #ffffff;
+}
+
+.table--header {
+    background-color: rgb(64, 58, 58);
+    position: sticky;
+    top: 0;
+}
+.table--header p {
     color: white;
-    padding: 20px;
 }
 
-.navbar--img {
-    height: 100%;
-    margin-right: 6px;
+.asks {
+    color: #efffef;
+    background-color: #cd5c5c;
 }
 
-.navbar--h2 {
-    font-size: 1.25rem;
-    margin-right: auto;
-}
-
-.navbar--h4 {
-    font-size: 0.75 rem;
-    font-weight: 500;
-}
-
-/* ###################### */
-/* #        CARD        # */
-/* ###################### */
-
-.form {
-    display: grid;
-    grid-template: 40px 40px / 1fr 1fr;
-    gap: 17px;
-}
-
-.form--input {
-    /* 
-font-family: "Karla", sans-serif; */
-    border-radius: 5px;
-    border: 1px solid #d5d4d8;
-    text-indent: 5px;
-}
-
-.form--button {
-    grid-column: 1 / -1; /* 
-font-family: "Karla", sans-serif; */
-    border-radius: 5px;
-    border: 1px solid #d5d4d8;
-    background: linear-gradient(90.41deg, #711f8d 1.14%, #a818da 100%);
-    color: white;
-    border: none;
-    cursor: pointer;
-}
-
-/* ###################### */
-/* #        MEME        # */
-/* ###################### */
-
-.img--meme {
-    margin-top: 30px;
-    height: 500px;
-    width: 100%;
-    object-fit: fill;
-}
-
-.text--top {
-    margin: auto;
-    font-size: 40px;
-    position: absolute;
-    top: 300px;
-    /* left: 275px; */
-    background-color: transparent;
-    color: white;
-    font-weight: bold;
-}
-
-.text--bottom {
-    margin: auto;
-    font-size: 40px;
-    position: absolute;
-    top: 575px;
-    /* left: 275px; */
-    background-color: transparent;
-    color: white;
-    font-weight: bold;
-}
-
-.sometext {
-    height: 500px;
-    margin: 3rem;
-    padding: 2rem;
-    border-style: solid;
-    border-width: 1px;
+.bids {
+    background-color: #8fbc8f;
 }

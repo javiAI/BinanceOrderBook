@@ -28,15 +28,8 @@ export default function Main() {
     const path = useRef(history.location.pathname);
     const currentPair = useRef(path.current.slice(1));
 
-    const lastPrice = useRef(NaN);
+    const lastPrice = useRef('---');
     const lastPriceUpdateId = useRef(0);
-
-    const symbolIndex = symbols.current.symbols.indexOf(currentPair.current);
-    const symbolDecimals = useRef(
-        symbols.current.symbols.includes(currentPair.current)
-            ? symbols.current.decimals[symbolIndex].max
-            : defaultPair.decimals
-    );
 
     // Order Book data and metadata
     const [tableData, setTableData] = useState({
@@ -44,7 +37,11 @@ export default function Main() {
             ? currentPair.current
             : defaultPair.symbol,
         maxRows: 10, // only affects rows to display on frontend.
-        decimals: symbolDecimals.current,
+        decimals: symbols.current.symbols.includes(currentPair.current)
+            ? symbols.current.decimals[
+                  symbols.current.symbols.indexOf(currentPair.current)
+              ].max
+            : defaultPair.decimals,
         initialPrice: lastPrice.current, // First price obtained from API
         lastPrice: lastPrice.current, // Last price obtained from WebSocket
         lastUpdateId: lastPriceUpdateId.current,
@@ -92,10 +89,16 @@ export default function Main() {
                 currentPair.current = defaultPair.symbol;
 
             // Set/Update OrderBook metadata
-            setTableData((prev) => ({
-                ...prev,
-                pair: currentPair.current,
-            }));
+            setTableData((prev) => {
+                const index = symbols.current.symbols.indexOf(
+                    currentPair.current
+                );
+                return {
+                    ...prev,
+                    pair: currentPair.current,
+                    decimals: symbols.current.decimals[index].max,
+                };
+            });
         };
         getExchangeInfo().then(console.log('Symbols updated!'));
         //eslint-disable-next-line
@@ -155,24 +158,28 @@ export default function Main() {
                     };
                 });
 
-            lastPrice.current = await client.current
+            const lastPrice = await client.current
                 .prices({ symbol: currentPair.current })
-                .then((lastPrice) => Number(lastPrice[currentPair.current]));
-
-            const index = symbols.current.symbols.indexOf(currentPair.current);
-            symbolDecimals.current = symbols.current.decimals[index].max;
+                .then((lastPrice) => lastPrice[currentPair.current]);
 
             // Set/Update OrderBook metadata
-            setTableData((prev) => ({
-                ...prev,
-                ...respBook,
-                decimals: symbolDecimals.current,
-                initialPrice: lastPrice.current.toFixed(symbolDecimals.current),
-                lastPrice: lastPrice.current.toFixed(symbolDecimals.current),
-            }));
+            setTableData((prev) => {
+                const index = symbols.current.symbols.indexOf(prev.pair);
+                return {
+                    ...prev,
+                    ...respBook,
+                    decimals:
+                        index < 0
+                            ? defaultPair.decimals
+                            : symbols.current.decimals[index].max,
+                    initialPrice: lastPrice,
+                    lastPrice: lastPrice,
+                };
+            });
+            return lastPrice;
         };
 
-        getOrderBookInfo();
+        lastPrice.current = getOrderBookInfo();
         // If currentPair and bar address do not match, navigate to currentPair
         if (path.current.slice(1) !== currentPair.current)
             navigate.current('/' + currentPair.current);
@@ -182,12 +189,11 @@ export default function Main() {
 
     useEffect(() => {
         /* 
-        Listens binance websocket messages. Receives info from two streams, "trade" and "depthUpdate", "price" and "new orders" respectively. 
-        They are both set only during "depthUpdate" so they are set synchronously, during "trade" it just saves its price value for later.
+        Listens binance websocket messages. Receives info from two different streams, "trade" and "depthUpdate", "price" and "new orders" respectively. They are both set only during "depthUpdate" messages, during "trade" messages it just saves its price value, so they are set synchronously.
             Triggers when:
-            - tableData.lastUpdateId is updated. Indicates there is new data to process.
+                - tableData.lastUpdateId is updated. Indicates there is new data to process.
             Actions:
-            - Checks type of message.
+                - Checks type of message.
                 - If "trade", retrieves and saves last symbol price.
                 - If "depthUpdate", updates/sets price, asks and bids. Asks and bids go through three steps before. Rows removal/addition/swap -> rows grouping -> rows sorting.
         */
@@ -196,7 +202,7 @@ export default function Main() {
             const updates = JSON.parse(event.data);
 
             // Price is not set to tableData yet but is recorded.
-            if (updates.e === 'trade') lastPrice.current = Number(updates.p);
+            if (updates.e === 'trade') lastPrice.current = updates.p;
 
             if (updates.e === 'depthUpdate') {
                 lastPriceUpdateId.current = updates.u;
@@ -206,17 +212,14 @@ export default function Main() {
                     const u = updates.u;
                     return {
                         ...dt,
-                        lastUpdateId: u,
-                        lastPrice: lastPrice.current.toFixed(
-                            symbolDecimals.current
-                        ),
+                        lastUpdateId: updates.u,
+                        lastPrice: lastPrice.current, // price set!
                         asks: updateTable(updates.a, dt.asks, 'asks', p, u),
                         bids: updateTable(updates.b, dt.bids, 'bids', p, u),
                     };
                 });
             }
         };
-        //eslint-disable-next-line
     }, [tableData.lastUpdateId]);
 
     const handleChange = (_, v) => {
@@ -240,10 +243,9 @@ export default function Main() {
             priceRef = (minA.length > maxB.length ? minA : maxB).split('.');
         } else priceRef = lastPrice.current.toString().split('.');
 
-        const min_d =
-            priceRef[0] === '0'
-                ? priceRef[1].length - Number(priceRef[1]).toString().length + 1
-                : getDecimals(priceRef[0]) + 1;
+        const min_d = +priceRef[0]
+            ? getDecimals(priceRef[0]) + 1
+            : priceRef[1].length - +priceRef[1].toString().length + 1;
 
         const decimals = Math.min(Math.max(min_d, d), max_d);
 
@@ -309,12 +311,7 @@ export default function Main() {
             <Routes>
                 <Route
                     path={'/' + currentPair.current}
-                    element={
-                        <OrderBook
-                            tableData={tableData}
-                            priceDecimals={symbolDecimals.current}
-                        />
-                    }
+                    element={<OrderBook tableData={tableData} />}
                 />
             </Routes>
         </div>
