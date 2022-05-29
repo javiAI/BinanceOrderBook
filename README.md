@@ -17,7 +17,9 @@ Check the live demo here https://javiai.github.io/BinanceOrderBook/
 To install locally:
 Clone the repository
 
-```git clone https://github.com/javiAI/BinanceOrderBook.git```
+```
+git clone https://github.com/javiAI/BinanceOrderBook.git
+```
 
 Move to your project location and install dependencies
 
@@ -28,5 +30,7 @@ npm install
 
 Start!
 
-```npm start```
+```
+npm start
+```
 
