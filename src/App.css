@@ -1,7 +1,6 @@
 .App {
-    width: 1300px;
+    max-width: 1500px;
     text-align: center;
-    display: flex;
     margin: auto;
 }
 /* ###################### */
@@ -14,7 +13,6 @@
 
 body {
     font-family: 'Karla', sans-serif;
-    margin: 0;
 }
 
 .main {
@@ -43,13 +41,17 @@ body {
 }
 
 .orderBook {
-    padding-left: 2rem;
-    padding-right: 2rem;
+    margin-left: 2rem;
+    margin-right: 2rem;
 }
 .tables--container {
+    min-width: 800px;
+    max-height: 800px;
     display: flex;
     gap: 2rem;
     background-color: #ffffff;
+}
+.table--container {
 }
 
 .table--header {
@@ -61,11 +63,14 @@ body {
     color: white;
 }
 
-.asks {
-    color: #efffef;
+.table_asks {
     background-color: #cd5c5c;
 }
 
-.bids {
+.table_bids {
     background-color: #8fbc8f;
+}
+
+.content-cell {
+    text-align-last: center;
 }

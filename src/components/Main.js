@@ -316,6 +316,15 @@ export default function Main() {
                         />
                     }
                 />
+                <Route
+                    path={'/BinanaceOrderBook' + currentPair.current}
+                    element={
+                        <OrderBook
+                            tableData={tableData}
+                            priceDecimals={symbolDecimals.current}
+                        />
+                    }
+                />
             </Routes>
         </div>
     );

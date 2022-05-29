@@ -7,21 +7,17 @@ import TableContent from './TableContent';
 
 export default function WholeTable(props) {
     return (
-        <TableContainer
-            component={Paper}
-            sx={{ maxHeight: 800, maxWidth: 650 }}
-        >
+        <TableContainer component={Paper} className='table--container'>
             <Table
                 size='small'
                 aria-label='simple table'
-                className={props.type}
+                className={'table_' + props.type}
             >
-                <TableHeader width={props.width} type={props.type} />
+                <TableHeader type={props.type} />
                 <TableContent
                     arr={props.arr}
                     amountToShow={props.maxRows}
                     type={props.type}
-                    width={props.width}
                     qtyDecimals={props.qtyDecimals}
                 />
             </Table>

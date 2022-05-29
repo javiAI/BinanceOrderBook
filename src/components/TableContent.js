@@ -4,7 +4,6 @@ import TableCell from '@mui/material/TableCell';
 
 export default function TableContent(props) {
     let cum = 0;
-    const width = props.width;
     const rows = props.amountToShow;
     const qtyDecimals = props.qtyDecimals;
     const selector = props.type === 'asks' ? true : false;
@@ -27,16 +26,16 @@ export default function TableContent(props) {
                 key={props.type + '_' + index}
                 style={{ background: rowBackground }}
             >
-                <TableCell align='center' sx={{ minWidth: width }}>
+                <TableCell className='content-cell'>
                     {selector ? `${ratio} %` : row.price}
                 </TableCell>
-                <TableCell align='center' sx={{ minWidth: width }}>
+                <TableCell className='content-cell'>
                     {selector ? cum.toFixed(qtyDecimals) : row.quantity}
                 </TableCell>
-                <TableCell align='center' sx={{ minWidth: width }}>
+                <TableCell className='content-cell'>
                     {selector ? row.quantity : cum.toFixed(qtyDecimals)}
                 </TableCell>
-                <TableCell align='center' sx={{ minWidth: width }}>
+                <TableCell className='content-cell'>
                     {selector ? row.price : `${ratio} %`}
                 </TableCell>
             </TableRow>

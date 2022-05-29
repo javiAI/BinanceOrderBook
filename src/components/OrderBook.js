@@ -79,14 +79,12 @@ export default function OrderBook(props) {
                     arr={asks}
                     maxRows={maxRows}
                     type={'asks'}
-                    width={150}
                     qtyDecimals={qtyDecimals}
                 />
                 <WholeTable
                     arr={bids}
                     maxRows={maxRows}
                     type={'bids'}
-                    width={150}
                     qtyDecimals={qtyDecimals}
                 />
             </div>
